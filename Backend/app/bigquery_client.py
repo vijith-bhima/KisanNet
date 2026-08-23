@@ -4,9 +4,24 @@ from google.cloud import aiplatform
 
 class BigQueryClient:
     def __init__(self):
-        self.project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("FIRESTORE_PROJECT_ID")
+        self.project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("FIRESTORE_PROJECT_ID", "kisannet-a0d82")
         self.dataset = os.getenv("BIGQUERY_DATASET", "kisannet")
-        self.client = bigquery.Client(project=self.project)
+        
+        # Load GCP Credentials from JSON string if provided (Render)
+        creds_json = os.getenv("GOOGLE_CREDENTIALS_JSON")
+        if creds_json:
+            from google.oauth2 import service_account
+            import json
+            info = json.loads(creds_json)
+            credentials = service_account.Credentials.from_service_account_info(info)
+            self.client = bigquery.Client(project=self.project, credentials=credentials)
+        else:
+            try:
+                # Fallback to local ADC
+                self.client = bigquery.Client(project=self.project)
+            except Exception as e:
+                print(f"Warning: BigQuery not configured properly. Missing GOOGLE_CREDENTIALS_JSON. Error: {e}")
+                self.client = None
         
         # Initialize Gemini AI Model instead of Vertex AI to bypass billing
         import google.generativeai as genai
