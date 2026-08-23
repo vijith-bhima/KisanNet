@@ -18,10 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source code, migrations, and startup script
+# Copy application source code, migrations, and scripts
 COPY app/ ./app/
 COPY migrations/ ./migrations/
 COPY start.sh ./start.sh
+COPY livekit_agent.py ./livekit_agent.py
 
 # Expose port
 EXPOSE 8080
