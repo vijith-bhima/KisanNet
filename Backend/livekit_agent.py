@@ -644,4 +644,6 @@ if __name__ == "__main__":
         print("Please create a free project at https://cloud.livekit.io/ and add your keys to the backend/.env file.\n")
         exit(1)
         
-    cli.run_app(WorkerOptions(entrypoint_fnc=entrypoint))
+    cli.run_app(WorkerOptions(
+        entrypoint_fnc=entrypoint
+    ))
