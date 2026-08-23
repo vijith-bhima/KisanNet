@@ -3,8 +3,18 @@ import { GoogleGenAI } from "@google/genai";
 import fs from "fs";
 import path from "path";
 
-// Initialize the Google GenAI SDK (it automatically picks up GEMINI_API_KEY from process.env)
-const ai = new GoogleGenAI({});
+let aiClient: GoogleGenAI | null = null;
+function getAI(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!aiClient && apiKey) {
+    try {
+      aiClient = new GoogleGenAI({ apiKey });
+    } catch (e) {
+      console.warn('Gemini client init note:', e);
+    }
+  }
+  return aiClient;
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +83,11 @@ ${ragContext ? `Here is some strictly vetted context retrieved from the KisanNet
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }));
+
+    const ai = getAI();
+    if (!ai) {
+      return new Response("Missing GEMINI_API_KEY environment variable.", { status: 500 });
+    }
 
     const responseStream = await ai.models.generateContentStream({
       model: "gemini-3.6-flash",
