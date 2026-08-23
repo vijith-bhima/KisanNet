@@ -53,19 +53,30 @@ export interface MandiItem {
   id: string;
   cropNameTe: string;
   cropNameEn: string;
+  rawCommodity?: string;
+  category?: string;
   variety: string;
   imageUrl: string;
   currentPrice: number;
+  modalPrice?: number;
   unit: string;
+  unitKg?: string;
+  pricePerKg?: number;
+  minPricePerKg?: number;
+  maxPricePerKg?: number;
   priceChange: number; // +2, -1, 0
   trend: 'up' | 'down' | 'stable';
   trendTextTe: string;
+  trendTextEn?: string;
   marketNameTe: string;
   marketNameEn: string;
+  district?: string;
+  state?: string;
   distanceKm: number;
   minPrice: number;
   maxPrice: number;
   date: string;
+  rawDate?: string;
 }
 
 export interface JournalEntry {
