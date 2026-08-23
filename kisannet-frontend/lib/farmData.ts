@@ -9,6 +9,7 @@ export interface MandiItem {
   priceChange: number;
   trend: 'up' | 'down' | 'stable';
   trendTextTe: string;
+  trendTextEn?: string;
   marketNameTe: string;
   marketNameEn: string;
   distanceKm: number;
