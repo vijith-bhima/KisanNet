@@ -5,9 +5,12 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Resolve path to "my data" folder dynamically relative to the backend
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-MY_DATA_DIR = os.path.join(BASE_DIR, "my data")
+# Resolve path to data folder - supports both local "my data" folder and seed data
+_BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_SEED_DATA_DIR = os.path.join(_BACKEND_DIR, "data", "seed")
+_MY_DATA_DIR = os.path.join(os.path.dirname(_BACKEND_DIR), "my data")
+# Use seed data if available (Docker/production), otherwise fall back to "my data" (local dev)
+MY_DATA_DIR = _SEED_DATA_DIR if os.path.exists(_SEED_DATA_DIR) else _MY_DATA_DIR
 
 class LocalRAG:
     def __init__(self):

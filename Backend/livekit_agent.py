@@ -3,6 +3,12 @@ import logging
 import os
 import sys
 import json
+import multiprocessing
+
+# Fix for Docker: forkserver multiprocessing fails in containers.
+# Must be set BEFORE any other imports that touch multiprocessing.
+if __name__ == "__main__":
+    multiprocessing.set_start_method("spawn", force=True)
 
 # Add backend directory to path if needed for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
