@@ -3,8 +3,7 @@ FROM python:3.11-slim as base
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PORT=8080
+    PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
