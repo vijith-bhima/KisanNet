@@ -623,20 +623,8 @@ async def entrypoint(ctx: JobContext):
 
     await session.start(room=ctx.room, agent=agent)
 
-    # Send a proactive greeting so the agent speaks first.
-    # For new users: introduce KisanNet. For returning users: greet by name.
-    if farmer_profile and farmer_profile.get("name"):
-        name = farmer_profile.get("name", "")
-        crop = farmer_profile.get("primary_crop", "your crops")
-        await session.say(
-            f"Hello {name}! Welcome back to KisanNet. How are {crop} doing today? I'm here to help with any questions about your farm.",
-            allow_interruptions=True
-        )
-    else:
-        await session.say(
-            "Hello! Welcome to KisanNet — your AI-powered farming assistant. I can help you with crop advice, live market prices, and government schemes. To get started, could you please tell me your name and which village or state you are from?",
-            allow_interruptions=True
-        )
+    # Gemini Live models operate on a continuous bidirectional audio stream.
+    # We rely on the user to initiate the conversation or the frontend to send a trigger.
 
 if __name__ == "__main__":
     if not os.getenv("LIVEKIT_URL"):
