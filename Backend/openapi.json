@@ -1,0 +1,370 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "KisanNet Backend API",
+    "description": "KisanNet Voice-First Agricultural Advisory Platform Backend API for BRICS AgriTech Hackathon.\nIntegrates Google AI Native stack: Gemini 2.0 Flash (structured JSON output), Google Cloud Speech-to-Text (native confidence), Google Cloud Text-to-Speech, Vertex AI text-embedding-004 (768-dim), and PostgreSQL pgvector (HNSW cosine index).",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health Check"],
+        "summary": "Health Check",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/journal-status/{journal_id}": {
+      "get": {
+        "tags": ["Pillar 1: Hands-Free Farm Documentation"],
+        "summary": "Get Journal Status Direct Alias",
+        "operationId": "journal_status_alias_api_v1_journal_status__journal_id__get",
+        "parameters": [
+          {
+            "name": "journal_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalStatusResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pillar1/ingest": {
+      "post": {
+        "tags": ["Pillar 1: Hands-Free Farm Documentation"],
+        "summary": "Ingest Audio",
+        "operationId": "ingest_audio_api_v1_pillar1_ingest_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "channel": { "type": "string", "default": "BROWSER" },
+                  "language_code": { "type": "string", "default": "en-US" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FarmJournalResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pillar1/ingest-json": {
+      "post": {
+        "tags": ["Pillar 1: Hands-Free Farm Documentation"],
+        "summary": "Ingest Audio Json",
+        "operationId": "ingest_audio_json_api_v1_pillar1_ingest_json_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AudioIngestBase64Request" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FarmJournalResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pillar1/journal-status/{journal_id}": {
+      "get": {
+        "tags": ["Pillar 1: Hands-Free Farm Documentation"],
+        "summary": "Get Journal Status",
+        "operationId": "get_journal_status_api_v1_pillar1_journal_status__journal_id__get",
+        "parameters": [
+          {
+            "name": "journal_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/JournalStatusResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pillar2/knowledge/ingest": {
+      "post": {
+        "tags": ["Pillar 2: RAG-Grounded AI Advice"],
+        "summary": "Ingest Knowledge Document",
+        "operationId": "ingest_knowledge_document_api_v1_pillar2_knowledge_ingest_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/KnowledgeBaseIngestRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/KnowledgeBaseResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pillar2/generate-advice": {
+      "post": {
+        "tags": ["Pillar 2: RAG-Grounded AI Advice"],
+        "summary": "Generate Advice For Journal",
+        "operationId": "generate_advice_for_journal_api_v1_pillar2_generate_advice_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdviceGenerationRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdviceGenerationResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pillar3/feedback-json": {
+      "post": {
+        "tags": ["Pillar 3: Community Trust Scores"],
+        "summary": "Submit Voice Feedback Json",
+        "operationId": "submit_voice_feedback_json_api_v1_pillar3_feedback_json_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VoiceFeedbackTextRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/FeedbackResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/pillar3/scores/{advice_identifier}": {
+      "get": {
+        "tags": ["Pillar 3: Community Trust Scores"],
+        "summary": "Get Advice Trust Metrics",
+        "operationId": "get_advice_trust_metrics_api_v1_pillar3_scores__advice_identifier__get",
+        "parameters": [
+          {
+            "name": "advice_identifier",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdviceTrustMetricsResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AudioIngestBase64Request": {
+        "type": "object",
+        "required": ["audio_base64"],
+        "properties": {
+          "audio_base64": { "type": "string" },
+          "channel": { "type": "string", "default": "BROWSER" },
+          "language_code": { "type": "string", "default": "en-US" }
+        }
+      },
+      "FarmJournalResponse": {
+        "type": "object",
+        "required": ["id", "farmer_id", "channel", "transcription", "confidence", "detected_language", "is_fully_processed", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "farmer_id": { "type": "string", "format": "uuid" },
+          "channel": { "type": "string" },
+          "transcription": { "type": "string" },
+          "confidence": { "type": "number" },
+          "detected_language": { "type": "string" },
+          "crop": { "type": "string" },
+          "disease_symptom": { "type": "string" },
+          "region": { "type": "string" },
+          "season": { "type": "string" },
+          "advice_text": { "type": "string" },
+          "advice_source": { "type": "string" },
+          "cost_benefit": { "type": "string" },
+          "is_fully_processed": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "JournalStatusResponse": {
+        "type": "object",
+        "required": ["id", "is_fully_processed", "transcription"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "is_fully_processed": { "type": "boolean" },
+          "transcription": { "type": "string" },
+          "advice_text": { "type": "string" },
+          "advice_source": { "type": "string" },
+          "cost_benefit": { "type": "string" },
+          "tts_prompt": { "type": "string" },
+          "audio_base64": { "type": "string" }
+        }
+      },
+      "KnowledgeBaseIngestRequest": {
+        "type": "object",
+        "required": ["title", "content", "source"],
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "crop": { "type": "string" },
+          "disease_symptom": { "type": "string" },
+          "region": { "type": "string" },
+          "season": { "type": "string" },
+          "source": { "type": "string" }
+        }
+      },
+      "KnowledgeBaseResponse": {
+        "type": "object",
+        "required": ["id", "title", "content", "source", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "crop": { "type": "string" },
+          "disease_symptom": { "type": "string" },
+          "region": { "type": "string" },
+          "season": { "type": "string" },
+          "source": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AdviceGenerationRequest": {
+        "type": "object",
+        "required": ["journal_id"],
+        "properties": {
+          "journal_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "AdviceGenerationResponse": {
+        "type": "object",
+        "required": ["journal_id", "advice_text", "advice_source", "cost_benefit", "tts_prompt", "is_fully_processed"],
+        "properties": {
+          "journal_id": { "type": "string", "format": "uuid" },
+          "advice_text": { "type": "string" },
+          "advice_source": { "type": "string" },
+          "cost_benefit": { "type": "string" },
+          "tts_prompt": { "type": "string" },
+          "audio_base64": { "type": "string" },
+          "is_fully_processed": { "type": "boolean" }
+        }
+      },
+      "VoiceFeedbackTextRequest": {
+        "type": "object",
+        "required": ["journal_id", "advice_identifier", "feedback_text"],
+        "properties": {
+          "journal_id": { "type": "string", "format": "uuid" },
+          "advice_identifier": { "type": "string" },
+          "feedback_text": { "type": "string" },
+          "language_code": { "type": "string", "default": "en-US" }
+        }
+      },
+      "FeedbackResponse": {
+        "type": "object",
+        "required": ["id", "journal_id", "farmer_id", "advice_identifier", "feedback_intent", "score", "retry_count", "needs_human_review", "calculated_wilson_score", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "journal_id": { "type": "string", "format": "uuid" },
+          "farmer_id": { "type": "string", "format": "uuid" },
+          "advice_identifier": { "type": "string" },
+          "feedback_intent": { "type": "string" },
+          "score": { "type": "number" },
+          "retry_count": { "type": "integer" },
+          "needs_human_review": { "type": "boolean" },
+          "calculated_wilson_score": { "type": "number" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "AdviceTrustMetricsResponse": {
+        "type": "object",
+        "required": ["advice_identifier", "total_feedback_count", "positive_count", "negative_count", "clarification_count", "retry_count", "human_review_count", "wilson_lower_bound", "bayesian_mean_score"],
+        "properties": {
+          "advice_identifier": { "type": "string" },
+          "total_feedback_count": { "type": "integer" },
+          "positive_count": { "type": "integer" },
+          "negative_count": { "type": "integer" },
+          "clarification_count": { "type": "integer" },
+          "retry_count": { "type": "integer" },
+          "human_review_count": { "type": "integer" },
+          "wilson_lower_bound": { "type": "number" },
+          "bayesian_mean_score": { "type": "number" }
+        }
+      }
+    }
+  }
+}

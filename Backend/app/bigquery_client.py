@@ -1,0 +1,98 @@
+import os
+from google.cloud import bigquery
+from google.cloud import aiplatform
+
+class BigQueryClient:
+    def __init__(self):
+        self.project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("FIRESTORE_PROJECT_ID")
+        self.dataset = os.getenv("BIGQUERY_DATASET", "kisannet")
+        self.client = bigquery.Client(project=self.project)
+        
+        # Initialize Gemini AI Model instead of Vertex AI to bypass billing
+        import google.generativeai as genai
+        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+    def embed_query(self, text):
+        """Generate embedding for a query using Gemini."""
+        import google.generativeai as genai
+        result = genai.embed_content(
+            model="models/text-embedding-004",
+            content=text,
+            task_type="retrieval_query"
+        )
+        return result['embedding']
+
+    def rag_search_crop(self, query_text, crop_type=None, top_k=5):
+        """RAG search for crop issues."""
+        query_embedding = self.embed_query(query_text)
+        
+        sql = f"""
+        WITH query_embedding AS (
+            SELECT {list(query_embedding)} AS embedding
+        )
+        SELECT 
+            id, issue_category, issue_subtype, crop_type, symptoms,
+            treatment_option_a, treatment_option_b, source, source_url, region_note, data_status,
+            1 - (VECTOR_DISTANCE(kb.embedding, qe.embedding) / 2) AS similarity
+        FROM `{self.project}.{self.dataset}.knowledge_base` kb
+        CROSS JOIN query_embedding qe
+        WHERE 1 - (VECTOR_DISTANCE(kb.embedding, qe.embedding) / 2) > 0.70
+        """
+        if crop_type:
+            sql += f" AND (kb.crop_type = '{crop_type}' OR kb.crop_type IS NULL)"
+        sql += f" ORDER BY similarity DESC LIMIT {top_k}"
+        
+        try:
+            results = self.client.query(sql).to_dataframe()
+            return results.to_dict('records')
+        except Exception:
+            return []
+
+    def rag_search_scheme(self, query_text, top_k=5):
+        """RAG search for government schemes."""
+        query_embedding = self.embed_query(query_text)
+        
+        sql = f"""
+        WITH query_embedding AS (
+            SELECT {list(query_embedding)} AS embedding
+        )
+        SELECT 
+            external_id, name, description, eligibility, apply_instructions, source, source_url,
+            1 - (VECTOR_DISTANCE(skb.embedding, qe.embedding) / 2) AS similarity
+        FROM `{self.project}.{self.dataset}.scheme_knowledge_base` skb
+        CROSS JOIN query_embedding qe
+        WHERE 1 - (VECTOR_DISTANCE(skb.embedding, qe.embedding) / 2) > 0.70
+        ORDER BY similarity DESC LIMIT {top_k}
+        """
+        try:
+            results = self.client.query(sql).to_dataframe()
+            return results.to_dict('records')
+        except Exception:
+            return []
+
+    def insert_feedback(self, journal_id, farmer_id, feedback, transcript, confidence):
+        """Insert farmer feedback into BigQuery."""
+        sql = f"""
+        INSERT INTO `{self.project}.{self.dataset}.answer_feedback`
+        (journal_id, farmer_id, feedback, raw_spoken_text, stt_confidence)
+        VALUES ('{journal_id}', '{farmer_id}', {feedback}, '{transcript}', {confidence})
+        """
+        self.client.query(sql).result()
+
+    def get_trust_score(self, advice_identifier):
+        """Get trust score from BigQuery materialized view."""
+        sql = f"""
+        SELECT 
+            total_unique_farmers,
+            positive_votes,
+            negative_votes,
+            bayesian_score,
+            wilson_lower_bound
+        FROM `{self.project}.{self.dataset}.trust_scores`
+        WHERE advice_identifier = '{advice_identifier}'
+        """
+        results = self.client.query(sql).to_dataframe()
+        return results.to_dict('records')[0] if len(results) > 0 else None
+
+# Initialize a single global instance
+bq_client = BigQueryClient()

@@ -1,0 +1,26 @@
+# Python & Virtual Environments
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+.venv-1/
+.pytest_cache/
+*.egg-info/
+
+# Secrets & Local Data
+.env
+.env.*
+!.env.example
+local_db.json
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

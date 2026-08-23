@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+  --font-baloo: "Baloo Tammudu 2", sans-serif;
+  --font-mukta: "Hind Guntur", sans-serif;
+}
+
+body {
+  background: #fbf6ea;
+  color: #1e4a32;
+}
+
+::selection {
+  background: #e5a114;
+  color: #123420;
+}
+
+:focus-visible {
+  outline: 3px solid #2f86a6;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Custom scrollbar for a softer feel */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbb98a;
+  border-radius: 8px;
+}

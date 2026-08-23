@@ -1,0 +1,24 @@
+{
+  "name": "KisanNet — Your Farming Voice",
+  "short_name": "KisanNet",
+  "description": "Voice-first agricultural advisory for every farmer",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FDFCF8",
+  "theme_color": "#1E4A32",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/kisannet_logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/kisannet_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

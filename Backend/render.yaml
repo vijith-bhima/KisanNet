@@ -1,0 +1,22 @@
+services:
+  # FastAPI Web Service
+  - type: web
+    name: kisannet-backend-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 8000
+
+  # LiveKit Voice Agent Background Worker
+  - type: worker
+    name: kisannet-voice-agent
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python livekit_agent.py dev
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0

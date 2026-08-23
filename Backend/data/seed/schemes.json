@@ -1,0 +1,67 @@
+[
+  {
+    "id": "scraped_pmk_fallback_1787483099",
+    "name": "Live Alert: PM-KISAN 15th Installment Update",
+    "description": "Scraped Alert: e-KYC is mandatory for the upcoming installment. Please visit your nearest CSC.",
+    "eligibility": "All registered PM-KISAN beneficiaries.",
+    "apply": "Complete e-KYC on the PM-KISAN portal or CSC.",
+    "source": "Scraped from PM-KISAN (Fallback)",
+    "source_url": "https://pmkisan.gov.in/",
+    "isLive": true
+  },
+  {
+    "id": "scraped_ms_1787483099",
+    "name": "Live Update: PM-AASHA (Annadata Aay SanraksHan Abhiyan)",
+    "description": "Scraped from MyScheme: The government has announced extended procurement operations for pulse and oilseed farmers under the Price Support Scheme (PSS).",
+    "eligibility": "Farmers registered on the state procurement portals growing pulses, oilseeds, and copra.",
+    "apply": "Contact your local APMC or state procurement agency.",
+    "source": "Scraped from MyScheme.gov.in",
+    "source_url": "https://www.myscheme.gov.in/",
+    "isLive": true
+  },
+  {
+    "id": "s1",
+    "name": "PM-KISAN (Pradhan Mantri Kisan Samman Nidhi)",
+    "description": "Direct income support of Rs. 6,000 per year, paid in three equal installments of Rs. 2,000 every four months, transferred directly to bank accounts",
+    "eligibility": "All landholding farmer families, subject to exclusion criteria for higher-income categories (e.g. income tax payers, institutional landholders)",
+    "apply": "Register via pmkisan.gov.in, or through Common Service Centres (CSCs); requires Aadhaar and land records",
+    "source": "Ministry of Agriculture and Farmers Welfare, Government of India",
+    "source_url": "https://pmkisan.gov.in"
+  },
+  {
+    "id": "s2",
+    "name": "PMFBY (Pradhan Mantri Fasal Bima Yojana)",
+    "description": "Crop insurance scheme covering yield losses due to natural calamities, pests, and diseases; farmer premium is capped at 2% for Kharif crops, 1.5% for Rabi crops, and 5% for commercial/horticultural crops",
+    "eligibility": "All farmers, including sharecroppers and tenant farmers, growing notified crops in notified areas",
+    "apply": "Enroll through banks, Common Service Centres, insurance company portals, or the national crop insurance portal, before the cut-off date each season",
+    "source": "Ministry of Agriculture and Farmers Welfare, Government of India",
+    "source_url": "https://pmfby.gov.in"
+  },
+  {
+    "id": "s3",
+    "name": "Soil Health Card Scheme",
+    "description": "Provides farmers with a report on the nutrient status of their soil along with fertilizer and soil amendment recommendations, issued once every 2 years per landholding",
+    "eligibility": "All farmers with agricultural land",
+    "apply": "Soil samples collected by the local Agriculture Department or Krishi Vigyan Kendra; cards distributed accordingly",
+    "source": "Department of Agriculture and Farmers Welfare, Government of India",
+    "source_url": "https://soilhealth.dac.gov.in"
+  },
+  {
+    "id": "s4",
+    "name": "Kisan Credit Card (KCC)",
+    "description": "Provides short-term credit for cultivation and allied needs at subsidized interest rates (effective rate as low as 4% per annum for prompt repayment under interest subvention)",
+    "eligibility": "Farmers, tenant farmers, sharecroppers, and self-help group members involved in agriculture or allied activities",
+    "apply": "Apply at any public/private sector bank, Regional Rural Bank, or cooperative bank with land records and identity proof",
+    "source": "NABARD / Reserve Bank of India, in coordination with the Ministry of Agriculture",
+    "source_url": "https://www.nabard.org"
+  },
+  {
+    "id": "s5",
+    "name": "Sub-Mission on Agricultural Mechanization (SMAM)",
+    "description": "Provides financial assistance for purchase of farm machinery and equipment, and for setting up Custom Hiring Centres; subsidy typically ranges 40-50% for small/marginal farmers depending on the equipment and state guidelines",
+    "eligibility": "Individual farmers (priority to small, marginal, women, SC/ST farmers), farmer producer organizations, and cooperatives",
+    "apply": "Apply through the state Agriculture Department or the Direct Benefit Transfer in Agriculture Mechanization (DBT) portal for the respective state",
+    "source": "Ministry of Agriculture and Farmers Welfare, Government of India",
+    "source_url": "https://agrimachinery.nic.in"
+  }
+]
