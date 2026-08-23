@@ -18,9 +18,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source code and migrations
+# Copy application source code, migrations, and startup script
 COPY app/ ./app/
 COPY migrations/ ./migrations/
+COPY start.sh ./start.sh
 
 # Expose port
 EXPOSE 8080
