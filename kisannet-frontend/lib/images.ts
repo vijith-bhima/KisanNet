@@ -9,6 +9,7 @@ export const IMAGES = {
   farmerSunrise: "https://images.pexels.com/photos/31096711/pexels-photo-31096711.jpeg?auto=compress&cs=tinysrgb&w=1200",
   farmerGrainDrying: "https://images.pexels.com/photos/24991353/pexels-photo-24991353.jpeg?auto=compress&cs=tinysrgb&w=1200",
   farmerPortrait: "https://images.pexels.com/photos/30573590/pexels-photo-30573590.jpeg?auto=compress&cs=tinysrgb&w=1000",
+  farmerProfile: "https://images.pexels.com/photos/30573590/pexels-photo-30573590.jpeg?auto=compress&cs=tinysrgb&w=1000",
   paddyAerial: "https://images.pexels.com/photos/8280924/pexels-photo-8280924.jpeg?auto=compress&cs=tinysrgb&w=1400",
   greenRiceField: "https://images.pexels.com/photos/1146708/pexels-photo-1146708.jpeg?auto=compress&cs=tinysrgb&w=1200",
 };
