@@ -26,8 +26,7 @@ COPY migrations/ ./migrations/
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK CMD curl --fail http://localhost:${PORT:-8080}/health || exit 1
+# (Removed Docker HEALTHCHECK to avoid conflicts with Railway/Render dynamic ports)
 
 # Start uvicorn server for Cloud Run / Railway
 CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"
