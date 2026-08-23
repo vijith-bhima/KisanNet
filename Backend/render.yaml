@@ -1,22 +1,39 @@
 services:
-  # FastAPI Web Service
+  # FastAPI Web Service — KisanNet Backend API
   - type: web
     name: kisannet-backend-api
     env: python
-    buildCommand: pip install -r requirements.txt
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements-deploy.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: ENVIRONMENT
+        value: production
       - key: PORT
-        value: 8000
-
-  # LiveKit Voice Agent Background Worker
-  - type: worker
-    name: kisannet-voice-agent
-    env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python livekit_agent.py dev
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.0
+        value: 10000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: GOOGLE_CLOUD_PROJECT
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS_JSON
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_PHONE_NUMBER
+        sync: false
+      - key: DATA_GOV_IN_API_KEY
+        sync: false
+      - key: LIVEKIT_URL
+        sync: false
+      - key: LIVEKIT_API_KEY
+        sync: false
+      - key: LIVEKIT_API_SECRET
+        sync: false
