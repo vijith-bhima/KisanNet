@@ -5,7 +5,7 @@
 
 if [ "$SERVICE_TYPE" = "voice" ]; then
     echo "Starting KisanNet Voice Agent (LiveKit)..."
-    python livekit_agent.py dev
+    python livekit_agent.py start
 else
     echo "Starting KisanNet Backend API (FastAPI)..."
     uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}

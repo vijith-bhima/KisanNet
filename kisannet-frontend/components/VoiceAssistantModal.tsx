@@ -75,7 +75,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantProps> = ({
       const participantName = user?.displayName ? encodeURIComponent(user.displayName) : "farmer";
 
       // 1. Fetch token from FastAPI backend
-      const res = await fetch(`http://localhost:8000/api/v1/voice/token?language=${currentOption.code}&participant_name=${participantName}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/voice/token?language=${currentOption.code}&participant_name=${participantName}`);
       if (!res.ok) {
         throw new Error(`Token request failed: ${res.statusText}`);
       }
