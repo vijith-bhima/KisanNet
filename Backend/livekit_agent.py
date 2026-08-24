@@ -6,29 +6,28 @@ import json
 import multiprocessing
 from google.genai import types as genai_types
 
-# Fix for Docker: forkserver multiprocessing fails in containers.
-# Must be set BEFORE any other imports that touch multiprocessing.
-if __name__ == "__main__":
-    multiprocessing.set_start_method("spawn", force=True)
-
 # Add backend directory to path if needed for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from dotenv import load_dotenv
+load_dotenv()
+
+# Initialize logger early so it is safe to use anywhere in top-level code
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("livekit_agent")
+
+gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+if not gemini_key:
+    logger.warning("GEMINI_API_KEY / GOOGLE_API_KEY is not set. Google GenAI will fail.")
+else:
+    # Set GOOGLE_API_KEY for the livekit-plugins-google module to pick up automatically
+    os.environ["GOOGLE_API_KEY"] = gemini_key
+    os.environ["GEMINI_API_KEY"] = gemini_key
 
 from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli
 from livekit.agents import function_tool, AgentSession
 from livekit.plugins import google
 from app.local_rag import local_rag
-
-load_dotenv()
-if not os.getenv("GEMINI_API_KEY"):
-    logger.warning("GEMINI_API_KEY is not set. Google GenAI will fail.")
-else:
-    # Set GOOGLE_API_KEY for the livekit-plugins-google module to pick up automatically
-    os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_API_KEY")
-
-logger = logging.getLogger("livekit_agent")
 
 # Import heavy clients ONCE at module level to avoid 7-8 second delay per user session
 from app.bigquery_client import bq_client
@@ -543,11 +542,9 @@ async def entrypoint(ctx: JobContext):
     # ── Set up Gemini Realtime Model + AgentSession (livekit-agents v1.x) ──
     model = google.realtime.RealtimeModel(
         model="gemini-2.5-flash-native-audio-preview-12-2025",
-        api_key=os.getenv("GEMINI_API_KEY"),
+        api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"),
         voice="Despina",
         thinking_config=genai_types.ThinkingConfig(thinking_budget=0)
-        
-
     )
 
     tools = [
@@ -571,12 +568,10 @@ async def entrypoint(ctx: JobContext):
         llm=model,
     )
 
-    
-    
     await session.start(
-    room=ctx.room,
-    agent=my_agent,
-)
+        room=ctx.room,
+        agent=my_agent,
+    )
     
     # Force the agent to greet the user proactively instead of waiting for them to speak first
     await session.generate_reply(
@@ -590,5 +585,6 @@ if __name__ == "__main__":
         exit(1)
         
     cli.run_app(WorkerOptions(
-        entrypoint_fnc=entrypoint
+        entrypoint_fnc=entrypoint,
+        initialize_process_timeout=120.0,
     ))

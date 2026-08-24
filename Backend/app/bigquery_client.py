@@ -24,13 +24,19 @@ class BigQueryClient:
                 self.client = None
         
         # Initialize Gemini AI Model using new google.genai package
-        from google import genai as google_genai
-        self._genai_client = google_genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        try:
+            from google import genai as google_genai
+            api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+            self._genai_client = google_genai.Client(api_key=api_key) if api_key else None
+        except Exception as e:
+            print(f"Warning: GenAI client could not be initialized in BigQueryClient: {e}")
+            self._genai_client = None
 
     def embed_query(self, text):
         """Generate embedding for a query using Gemini."""
         from google import genai as google_genai
-        client = google_genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        client = self._genai_client or google_genai.Client(api_key=api_key)
         result = client.models.embed_content(
             model="models/text-embedding-004",
             contents=text,
