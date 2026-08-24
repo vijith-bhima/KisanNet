@@ -386,6 +386,7 @@ async def entrypoint(ctx: JobContext):
         api_key=os.getenv("GEMINI_API_KEY")
     )
 
+    # pyrefly: ignore [missing-import]
     from livekit.agents.multimodal import MultimodalAgent
     
     fnc_ctx = llm.FunctionContext()
