@@ -1,3 +1,4 @@
+from app.pillar1 import resnet_model
 import asyncio
 import logging
 import os
@@ -15,11 +16,18 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from dotenv import load_dotenv
 
-from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli, llm
+from livekit.agents import AutoSubscribe, JobContext, WorkerOptions, cli
+from livekit.agents import function_tool, AgentSession
 from livekit.plugins import google
 from app.local_rag import local_rag
 
 load_dotenv()
+if not os.getenv("GEMINI_API_KEY"):
+    logger.warning("GEMINI_API_KEY is not set. Google GenAI will fail.")
+else:
+    # Set GOOGLE_API_KEY for the livekit-plugins-google module to pick up automatically
+    os.environ["GOOGLE_API_KEY"] = os.getenv("GEMINI_API_KEY")
+
 logger = logging.getLogger("livekit_agent")
 
 # Import heavy clients ONCE at module level to avoid 7-8 second delay per user session
@@ -379,19 +387,9 @@ async def entrypoint(ctx: JobContext):
         f"USER CONTEXT:\n{greeting_instruction}"
     )
 
-    # Set up Gemini Multimodal Live Audio Model
-    model = google.realtime.RealtimeModel(
-        model="models/gemini-3.1-flash-live-preview",
-        instructions=base_instructions,
-        api_key=os.getenv("GEMINI_API_KEY")
-    )
+    # ── Tool definitions using v1.x @function_tool decorator ──────────────
 
-    # pyrefly: ignore [missing-import]
-    from livekit.agents.multimodal import MultimodalAgent
-    
-    fnc_ctx = llm.FunctionContext()
-    
-    @fnc_ctx.ai_callable(description="Save a new farmer's profile with their name, location, primary crop, and mobile number.")
+    @function_tool(description="Save a new farmer's profile with their name, location, primary crop, and mobile number.")
     async def create_farmer_profile(name: str, location: str, primary_crop: str, phone_number: str = "Unknown") -> str:
         """Saves onboarding details for a new farmer to the database."""
         try:
@@ -412,13 +410,11 @@ async def entrypoint(ctx: JobContext):
             logger.warning(f"Error creating profile (likely disabled API): {e}")
             return f"Successfully created profile for {name}. Thank the user for joining KisanNet."
 
-    @fnc_ctx.ai_callable(description="Update an existing farmer's profile with new information they just told you (e.g. phone number, new crop, soil type).")
+    @function_tool(description="Update an existing farmer's profile with new information they just told you (e.g. phone number, new crop, soil type).")
     async def update_farmer_profile(details_to_update: str) -> str:
         """Updates the farmer's profile in the database with new remembered details."""
         try:
-            farmer_data = {
-                "last_remembered_detail": details_to_update
-            }
+            farmer_data = {"last_remembered_detail": details_to_update}
             await asyncio.wait_for(
                 asyncio.to_thread(firestore_client.update_farmer, farmer_identity, farmer_data),
                 timeout=2.0
@@ -428,7 +424,7 @@ async def entrypoint(ctx: JobContext):
             logger.warning(f"Error updating profile: {e}")
             return "Successfully remembered details."
 
-    @fnc_ctx.ai_callable(description="Search the local agricultural knowledge base or perform live autonomous research on trusted scientific university websites for crop diseases, pest treatments, fertilizer dosages, or government schemes. Use this whenever the farmer asks for agricultural advice or facts.")
+    @function_tool(description="Search the local agricultural knowledge base or perform live autonomous research on trusted scientific university websites for crop diseases, pest treatments, fertilizer dosages, or government schemes. Use this whenever the farmer asks for agricultural advice or facts.")
     async def research_agricultural_query(query: str) -> str:
         """Execute full agentic research workflow on the farmer's query."""
         try:
@@ -440,13 +436,12 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"Error in autonomous agentic research tool: {e}")
             return "Technical error during research. Please recommend consulting a local agriculture officer."
 
-    @fnc_ctx.ai_callable(description="Submit feedback to the community trust system if the farmer says a treatment worked or didn't work.")
+    @function_tool(description="Submit feedback to the community trust system if the farmer says a treatment worked or didn't work.")
     async def submit_community_feedback(advice_topic: str, worked: bool, farmer_feedback_summary: str) -> str:
         """Log farmer feedback about an agricultural treatment into the community trust database."""
         try:
             numeric_feedback = 1 if worked else 2
             mock_journal_id = str(uuid.uuid4())
-            
             await asyncio.wait_for(
                 asyncio.to_thread(bq_client.insert_feedback, mock_journal_id, farmer_identity, numeric_feedback, farmer_feedback_summary, 0.99),
                 timeout=2.0
@@ -456,7 +451,7 @@ async def entrypoint(ctx: JobContext):
             logger.warning(f"Error in feedback tool (likely disabled API): {e}")
             return "Feedback successfully logged to the community trust database."
 
-    @fnc_ctx.ai_callable(description="Find past farmers in the community who successfully solved the same crop issue.")
+    @function_tool(description="Find past farmers in the community who successfully solved the same crop issue.")
     async def find_past_solvers(crop_type: str, issue_description: str) -> str:
         """Search the database for past successful solvers of the specified problem."""
         try:
@@ -473,19 +468,18 @@ async def entrypoint(ctx: JobContext):
             matches = match_result.get("matches", [])
             if not matches:
                 return "No community matches found. Please offer standard advice instead."
-            
             res = [{"farmer_name": m.get("farmer_name"), "village": m.get("village"), "solution_used": m.get("solution_text"), "farmer_id": m.get("target_farmer_id")} for m in matches]
             return "Found matches: " + json.dumps(res) + "\nTell the farmer about one of these matches and ask if they want to be connected via phone call."
         except Exception as e:
             logger.error(f"Error in match tool: {e}")
             return "Technical error finding matches."
 
-    @fnc_ctx.ai_callable(description="Initiate a live phone call to connect the current farmer with a past successful solver.")
+    @function_tool(description="Initiate a live phone call to connect the current farmer with a past successful solver.")
     async def connect_me_to_farmer(target_farmer_id: str) -> str:
         """Trigger a bridge call to the target farmer."""
         return "Call initiated! Please tell the farmer that they will receive a phone call shortly bridging them to the peer."
 
-    @fnc_ctx.ai_callable(description="Fetch LIVE, REAL-TIME crop market price from official AGMARKNET data via data.gov.in. Use this whenever the farmer asks about TODAY's price, CURRENT price, LATEST price, mandi rate, market rate, or \"ధర ఎంత\" / \"price kya hai\" type questions.")
+    @function_tool(description="Fetch LIVE, REAL-TIME crop market price from official AGMARKNET data via data.gov.in. Use this whenever the farmer asks about TODAY's price, CURRENT price, LATEST price, mandi rate, market rate, or price-related questions.")
     async def get_live_crop_price(crop: str, state: str = "", district: str = "", market: str = "") -> str:
         """Get today's official live market price for a crop."""
         logger.info(f"[AGENT] get_live_crop_price called: crop={crop}, state={state}, district={district}, market={market}")
@@ -507,7 +501,7 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"[AGENT] get_live_crop_price error: {e}")
             return "I could not verify today's market price from the official source right now. Please try again in a moment."
 
-    @fnc_ctx.ai_callable(description="Find which market across India or a state has the HIGHEST price for a crop today.")
+    @function_tool(description="Find which market across India or a state has the HIGHEST price for a crop today.")
     async def get_best_market_price(crop: str, state: str = "") -> str:
         """Find the market with the best price for a crop today."""
         logger.info(f"[AGENT] get_best_market_price called: crop={crop}, state={state}")
@@ -524,7 +518,7 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"[AGENT] get_best_market_price error: {e}")
             return "I could not retrieve market comparison data right now. Please try again shortly."
 
-    @fnc_ctx.ai_callable(description="Get historical crop price data over the last several days.")
+    @function_tool(description="Get historical crop price data over the last several days.")
     async def get_historical_crop_prices(crop: str, state: str = "", district: str = "", days: int = 7) -> str:
         """Get price history and trend for a crop over recent days."""
         logger.info(f"[AGENT] get_historical_crop_prices called: crop={crop}, days={days}")
@@ -544,13 +538,48 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"[AGENT] get_historical_crop_prices error: {e}")
             return "I could not retrieve historical price data right now. Please try again shortly."
 
-    # Initialize and start the Multimodal Agent for Gemini Realtime
-    agent = MultimodalAgent(
-        model=model,
-        fnc_ctx=fnc_ctx
+    from livekit.agents import Agent
+
+    # ── Set up Gemini Realtime Model + AgentSession (livekit-agents v1.x) ──
+    model = google.realtime.RealtimeModel(
+        model="gemini-2.5-flash-native-audio-preview-12-2025",
+        api_key=os.getenv("GEMINI_API_KEY"),
+        voice="Aoede",
+
     )
+
+    tools = [
+        create_farmer_profile,
+        update_farmer_profile,
+        research_agricultural_query,
+        submit_community_feedback,
+        find_past_solvers,
+        connect_me_to_farmer,
+        get_live_crop_price,
+        get_best_market_price,
+        get_historical_crop_prices,
+    ]
+
+    my_agent = Agent(
+        instructions=base_instructions,
+        tools=tools,
+    )
+
+    session = AgentSession(
+        llm=model,
+    )
+
     
-    agent.start(ctx.room, participant)
+    
+    await session.start(
+    room=ctx.room,
+    agent=my_agent,
+)
+    
+    # Force the agent to greet the user proactively instead of waiting for them to speak first
+    await session.generate_reply(
+        instructions="Please greet the farmer warmly based on your provided instructions."
+    )
 
 if __name__ == "__main__":
     if not os.getenv("LIVEKIT_URL"):

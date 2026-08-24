@@ -60,30 +60,29 @@ class IssueClassifier:
             return ("OTHER", None)
 
         try:
-            import google.generativeai as genai
+            from google import genai as google_genai
+            import json as _json
             if self.api_key:
-                genai.configure(api_key=self.api_key)
-                model = genai.GenerativeModel(self.model_name)
+                _client = google_genai.Client(api_key=self.api_key)
                 prompt = (
                     "Classify the following farmer query into an issue category and specific issue subtype.\n"
                     f"Categories: {', '.join(VALID_ISSUE_CATEGORIES)}\n"
                     f"Crop: {crop_type or 'General / None'}\n"
-                    f"Query: \"{query}\""
+                    f"Query: \"{query}\"\n"
+                    "Respond ONLY with a JSON object like: {\"issue_category\": \"...\", \"issue_subtype\": \"...\"}"
                 )
-                res = model.generate_content(
-                    prompt,
-                    generation_config=genai.GenerationConfig(
-                        response_mime_type="application/json",
-                        response_schema=IssueClassificationSchema
-                    )
+                res = _client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
                 )
-                parsed = json.loads(res.text.strip())
+                parsed = _json.loads(res.text.strip())
                 cat = parsed.get("issue_category", "OTHER").upper()
                 sub = parsed.get("issue_subtype")
                 if cat in VALID_ISSUE_CATEGORIES:
                     return (cat, sub)
         except Exception as e:
             logger.debug(f"Gemini issue classifier fallback: {e}")
+
 
         # Fast keyword heuristic fallback
         q_lower = query.lower()

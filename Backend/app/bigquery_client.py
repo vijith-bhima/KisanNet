@@ -23,19 +23,20 @@ class BigQueryClient:
                 print(f"Warning: BigQuery not configured properly. Missing GOOGLE_CREDENTIALS_JSON. Error: {e}")
                 self.client = None
         
-        # Initialize Gemini AI Model instead of Vertex AI to bypass billing
-        import google.generativeai as genai
-        genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+        # Initialize Gemini AI Model using new google.genai package
+        from google import genai as google_genai
+        self._genai_client = google_genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
     def embed_query(self, text):
         """Generate embedding for a query using Gemini."""
-        import google.generativeai as genai
-        result = genai.embed_content(
+        from google import genai as google_genai
+        client = google_genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        result = client.models.embed_content(
             model="models/text-embedding-004",
-            content=text,
-            task_type="retrieval_query"
+            contents=text,
         )
-        return result['embedding']
+        return result.embeddings[0].values
+
 
     def rag_search_crop(self, query_text, crop_type=None, top_k=5):
         """RAG search for crop issues."""

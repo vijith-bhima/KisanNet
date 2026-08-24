@@ -301,12 +301,16 @@ async def direct_voice_talk(
         f"Query: '{transcription}'\n"
         "Respond with EXACTLY ONE WORD from the categories above."
     )
-    import google.generativeai as genai
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    from google import genai as google_genai
+    _cls_client = google_genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     classification = "CROP_ISSUE"
     try:
-        response = await model.generate_content_async(classification_prompt)
-        classification = response.text.strip().upper()
+        cls_response = await asyncio.to_thread(
+            _cls_client.models.generate_content,
+            model="gemini-2.0-flash",
+            contents=classification_prompt,
+        )
+        classification = cls_response.text.strip().upper()
     except Exception as e:
         logger.warning(f"Classification failed, defaulting to CROP_ISSUE: {e}")
 
@@ -490,12 +494,16 @@ async def direct_voice_talk_audio(
         f"Query: '{transcription}'\n"
         "Respond with EXACTLY ONE WORD from the categories above."
     )
-    import google.generativeai as genai
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    from google import genai as google_genai
+    _cls_client2 = google_genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     classification = "CROP_ISSUE"
     try:
-        response = await model.generate_content_async(classification_prompt)
-        classification = response.text.strip().upper()
+        cls_response2 = await asyncio.to_thread(
+            _cls_client2.models.generate_content,
+            model="gemini-2.0-flash",
+            contents=classification_prompt,
+        )
+        classification = cls_response2.text.strip().upper()
     except Exception as e:
         logger.warning(f"Classification failed, defaulting to CROP_ISSUE: {e}")
 

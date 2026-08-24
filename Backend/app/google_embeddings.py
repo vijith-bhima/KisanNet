@@ -19,18 +19,13 @@ class GoogleEmbeddingsClient:
         Generates a 768-dimensional normalized embedding vector for text using text-embedding-004.
         """
         try:
-            import google.generativeai as genai
-            if settings.GOOGLE_API_KEY:
-                genai.configure(api_key=settings.GOOGLE_API_KEY)
-            
-            response = genai.embed_content(
+            from google import genai as google_genai
+            client = google_genai.Client(api_key=settings.GOOGLE_API_KEY or None)
+            result = client.models.embed_content(
                 model=f"models/{self.model_name}",
-                content=text,
-                task_type="retrieval_document"
+                contents=text,
             )
-            embedding = response.get("embedding", [])
-            if isinstance(embedding, dict):
-                embedding = embedding.get("values", [])
+            embedding = result.embeddings[0].values if result.embeddings else []
 
             if isinstance(embedding, list) and len(embedding) == self.dimension:
                 return [float(x) for x in embedding]
