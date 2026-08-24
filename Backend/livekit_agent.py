@@ -1,4 +1,3 @@
-from app.pillar1 import resnet_model
 import asyncio
 import logging
 import os
@@ -544,7 +543,7 @@ async def entrypoint(ctx: JobContext):
     model = google.realtime.RealtimeModel(
         model="gemini-2.5-flash-native-audio-preview-12-2025",
         api_key=os.getenv("GEMINI_API_KEY"),
-        voice="Aoede",
+        voice="Despina",
 
     )
 
