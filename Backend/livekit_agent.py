@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import multiprocessing
+from google.genai import types as genai_types
 
 # Fix for Docker: forkserver multiprocessing fails in containers.
 # Must be set BEFORE any other imports that touch multiprocessing.
@@ -46,7 +47,7 @@ from datetime import datetime, timedelta
 
 _MP_BASE = "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070"
 _MP_CACHE_TTL = int(os.getenv("MARKET_CACHE_TTL_MINUTES", "30"))
-_MP_TIMEOUT = 10
+_MP_TIMEOUT = 3
 _mp_cache: dict = {}
 
 _CROP_MAP = {
@@ -172,7 +173,7 @@ async def _mp_fetch(crop=None, state=None, district=None, market=None, date=None
     logger.info(f"[MARKET] Fetching official data | Source: AGMARKNET | crop={crop}, state={state}, district={district}, market={market}, date={date}")
     
     import asyncio
-    max_retries = 3
+    max_retries = 1
     for attempt in range(max_retries):
         try:
             async with httpx.AsyncClient(timeout=_MP_TIMEOUT) as client:
@@ -544,6 +545,8 @@ async def entrypoint(ctx: JobContext):
         model="gemini-2.5-flash-native-audio-preview-12-2025",
         api_key=os.getenv("GEMINI_API_KEY"),
         voice="Despina",
+        thinking_config=genai_types.ThinkingConfig(thinking_budget=0)
+        
 
     )
 
