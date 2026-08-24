@@ -555,7 +555,6 @@ async def entrypoint(ctx: JobContext):
             return "I could not retrieve historical price data right now. Please try again shortly."
 
     from livekit.agents import Agent
-    from livekit.plugins import silero
 
     # ── Set up Gemini Realtime Model + AgentSession (livekit-agents v1.x) ──
     model = google.realtime.RealtimeModel(
