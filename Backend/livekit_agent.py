@@ -4,6 +4,17 @@ import os
 import sys
 import json
 import multiprocessing
+
+# CRITICAL: Force 'spawn' start method BEFORE any other imports.
+# On Linux (Docker/Railway), the default is 'forkserver', which crashes in
+# containers with a BrokenPipeError because the forkserver helper process
+# dies immediately. 'spawn' starts a fresh Python interpreter per worker,
+# which is the only reliable method in containerized environments.
+try:
+    multiprocessing.set_start_method("spawn", force=True)
+except RuntimeError:
+    pass  # Already set; safe to ignore
+
 from google.genai import types as genai_types
 
 # Add backend directory to path if needed for imports
@@ -587,4 +598,7 @@ if __name__ == "__main__":
     cli.run_app(WorkerOptions(
         entrypoint_fnc=entrypoint,
         initialize_process_timeout=120.0,
+        # Explicitly force spawn mode so Railway/Docker containers never use
+        # forkserver (which raises BrokenPipeError in containerized environments)
+        multiprocessing_context="spawn",
     ))
