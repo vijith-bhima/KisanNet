@@ -386,245 +386,170 @@ async def entrypoint(ctx: JobContext):
         api_key=os.getenv("GEMINI_API_KEY")
     )
 
-    from livekit.agents import AgentSession, Agent, function_tool
+    from livekit.agents.multimodal import MultimodalAgent
     
-    class KisanNetAgent(Agent):
-        def __init__(self, instructions, farmer_identity):
-            super().__init__(instructions=instructions)
-            self.farmer_identity = farmer_identity
-
-        @function_tool(description="Save a new farmer's profile with their name, location, primary crop, and mobile number.")
-        async def create_farmer_profile(self, name: str, location: str, primary_crop: str, phone_number: str = "Unknown") -> str:
-            """Saves onboarding details for a new farmer to the database."""
-            try:
-                farmer_data = {
-                    "name": name,
-                    "location": location,
-                    "primary_crop": primary_crop,
-                    "session_token": self.farmer_identity,
-                    "phone_number": phone_number,
-                    "created_at": "now"
-                }
-                # Fast non-blocking save
-                await asyncio.wait_for(
-                    asyncio.to_thread(firestore_client.create_farmer, farmer_data),
-                    timeout=2.0
-                )
-                return f"Successfully created profile for {name} with number {phone_number}. Thank the user for joining KisanNet."
-            except Exception as e:
-                logger.warning(f"Error creating profile (likely disabled API): {e}")
-                return f"Successfully created profile for {name}. Thank the user for joining KisanNet."
-
-        @function_tool(description="Update an existing farmer's profile with new information they just told you (e.g. phone number, new crop, soil type).")
-        async def update_farmer_profile(self, details_to_update: str) -> str:
-            """Updates the farmer's profile in the database with new remembered details."""
-            try:
-                # We expect the agent to pass a JSON string, but if they pass raw text we just save it as a 'notes' field for now,
-                # or better, parse it. Let's just save it as an append to a 'remembered_details' string.
-                farmer_data = {
-                    "last_remembered_detail": details_to_update
-                }
-                await asyncio.wait_for(
-                    asyncio.to_thread(firestore_client.update_farmer, self.farmer_identity, farmer_data),
-                    timeout=2.0
-                )
-                return f"Successfully updated and remembered details: {details_to_update}. Confirm to the user that you have memorized this."
-            except Exception as e:
-                logger.warning(f"Error updating profile: {e}")
-                return "Successfully remembered details."
-
-        @function_tool(description="Search the local agricultural knowledge base or perform live autonomous research on trusted scientific university websites for crop diseases, pest treatments, fertilizer dosages, or government schemes. Use this whenever the farmer asks for agricultural advice or facts.")
-        async def research_agricultural_query(self, query: str) -> str:
-            """Execute full agentic research workflow on the farmer's query."""
-            try:
-                from app.agentic_research import agentic_researcher
-                logger.info(f"Agentic Web Research Tool called for: {query}")
-                # We tell the user we are researching, although LiveKit doesn't easily let us send text mid-tool without a custom event.
-                # The workflow handles intent analysis, RAG, Web Search, verification, and formatting.
-                final_answer = await agentic_researcher.run_workflow(query, language="English")
-                return final_answer
-            except Exception as e:
-                logger.error(f"Error in autonomous agentic research tool: {e}")
-                return "Technical error during research. Please recommend consulting a local agriculture officer."
-
-        @function_tool(description="Submit feedback to the community trust system if the farmer says a treatment worked or didn't work.")
-        async def submit_community_feedback(self, advice_topic: str, worked: bool, farmer_feedback_summary: str) -> str:
-            """Log farmer feedback about an agricultural treatment into the community trust database."""
-            try:
-                numeric_feedback = 1 if worked else 2
-                mock_farmer_id = self.farmer_identity 
-                mock_journal_id = str(uuid.uuid4())
-                
-                await asyncio.wait_for(
-                    asyncio.to_thread(bq_client.insert_feedback, mock_journal_id, mock_farmer_id, numeric_feedback, farmer_feedback_summary, 0.99),
-                    timeout=2.0
-                )
-                return "Feedback successfully logged to the community trust database."
-            except Exception as e:
-                logger.warning(f"Error in feedback tool (likely disabled API): {e}")
-                return "Feedback successfully logged to the community trust database."
-
-        @function_tool(description="Find past farmers in the community who successfully solved the same crop issue.")
-        async def find_past_solvers(self, crop_type: str, issue_description: str) -> str:
-            """Search the database for past successful solvers of the specified problem."""
-            try:
-                mock_farmer_id = self.farmer_identity
-                match_result = await matching_engine.find_matches(
-                    farmer_id=mock_farmer_id,
-                    query=issue_description,
-                    issue_category="CROP_DISEASE",
-                    issue_subtype=issue_description,
-                    region="Unknown",
-                    season="Unknown",
-                    crop_type=crop_type,
-                    top_k=2
-                )
-                matches = match_result.get("matches", [])
-                if not matches:
-                    return "No community matches found. Please offer standard advice instead."
-                
-                res = [{"farmer_name": m.get("farmer_name"), "village": m.get("village"), "solution_used": m.get("solution_text"), "farmer_id": m.get("target_farmer_id")} for m in matches]
-                return "Found matches: " + json.dumps(res) + "\nTell the farmer about one of these matches and ask if they want to be connected via phone call."
-            except Exception as e:
-                logger.error(f"Error in match tool: {e}")
-                return "Technical error finding matches."
-
-        @function_tool(description="Initiate a live phone call to connect the current farmer with a past successful solver.")
-        async def connect_me_to_farmer(self, target_farmer_id: str) -> str:
-            """Trigger a bridge call to the target farmer."""
-            return "Call initiated! Please tell the farmer that they will receive a phone call shortly bridging them to the peer."
-
-        @function_tool(
-            description=(
-                "Fetch LIVE, REAL-TIME crop market price from official AGMARKNET data via data.gov.in. "
-                "Use this whenever the farmer asks about TODAY's price, CURRENT price, LATEST price, "
-                "mandi rate, market rate, or \"ధర ఎంత\" / \"price kya hai\" type questions. "
-                "NEVER answer price questions from memory — always call this tool. "
-                "If the farmer does not give location, ask for it first."
+    fnc_ctx = llm.FunctionContext()
+    
+    @fnc_ctx.ai_callable(description="Save a new farmer's profile with their name, location, primary crop, and mobile number.")
+    async def create_farmer_profile(name: str, location: str, primary_crop: str, phone_number: str = "Unknown") -> str:
+        """Saves onboarding details for a new farmer to the database."""
+        try:
+            farmer_data = {
+                "name": name,
+                "location": location,
+                "primary_crop": primary_crop,
+                "session_token": farmer_identity,
+                "phone_number": phone_number,
+                "created_at": "now"
+            }
+            await asyncio.wait_for(
+                asyncio.to_thread(firestore_client.create_farmer, farmer_data),
+                timeout=2.0
             )
-        )
-        async def get_live_crop_price(
-            self,
-            crop: str,
-            state: str = "",
-            district: str = "",
-            market: str = "",
-        ) -> str:
-            """Get today's official live market price for a crop."""
-            logger.info(f"[AGENT] get_live_crop_price called: crop={crop}, state={state}, district={district}, market={market}")
-            try:
-                result = await _mp_get_live(
-                    crop=crop,
-                    state=state or None,
-                    district=district or None,
-                    market=market or None,
-                )
-                if "error" in result:
-                    return f"ERROR: {result['error']}"
-                lines = [
-                    f"LIVE MARKET PRICE (Source: {result.get('source', 'AGMARKNET')})",
-                    f"Crop: {result.get('crop', crop)}",
-                    f"Market: {result.get('market', 'N/A')}, {result.get('district', '')}, {result.get('state', '')}",
-                    f"Date: {result.get('date', 'Today')}",
-                    f"Min Price: Rs {result.get('min_price', 'N/A')} per {result.get('unit', 'Quintal')}",
-                    f"Max Price: Rs {result.get('max_price', 'N/A')} per {result.get('unit', 'Quintal')}",
-                    f"Modal Price: Rs {result.get('modal_price', 'N/A')} per {result.get('unit', 'Quintal')}",
-                    f"Retrieved: {result.get('retrieved_at', '')}",
-                ]
-                return "\n".join(lines)
-            except Exception as e:
-                logger.error(f"[AGENT] get_live_crop_price error: {e}")
-                return "I could not verify today's market price from the official source right now. Please try again in a moment."
+            return f"Successfully created profile for {name} with number {phone_number}. Thank the user for joining KisanNet."
+        except Exception as e:
+            logger.warning(f"Error creating profile (likely disabled API): {e}")
+            return f"Successfully created profile for {name}. Thank the user for joining KisanNet."
 
-        @function_tool(
-            description=(
-                "Find which market across India or a state has the HIGHEST price for a crop today. "
-                "Use when the farmer asks: 'which market has best price?', 'which mandi pays most?', "
-                "'highest chilli price today?', 'best rate for cotton?'"
+    @fnc_ctx.ai_callable(description="Update an existing farmer's profile with new information they just told you (e.g. phone number, new crop, soil type).")
+    async def update_farmer_profile(details_to_update: str) -> str:
+        """Updates the farmer's profile in the database with new remembered details."""
+        try:
+            farmer_data = {
+                "last_remembered_detail": details_to_update
+            }
+            await asyncio.wait_for(
+                asyncio.to_thread(firestore_client.update_farmer, farmer_identity, farmer_data),
+                timeout=2.0
             )
-        )
-        async def get_best_market_price(
-            self,
-            crop: str,
-            state: str = "",
-        ) -> str:
-            """Find the market with the best price for a crop today."""
-            logger.info(f"[AGENT] get_best_market_price called: crop={crop}, state={state}")
-            try:
-                result = await _mp_get_best(
-                    crop=crop,
-                    state=state or None,
-                    top_k=3,
-                )
-                if "error" in result:
-                    return f"ERROR: {result['error']}"
-                markets = result.get("top_markets", [])
-                if not markets:
-                    return f"No market data found for {crop} today."
-                lines = [f"TOP MARKETS for {result.get('crop', crop)} on {result.get('date', 'today')} (Source: {result.get('source', 'AGMARKNET')})"]
-                for i, m in enumerate(markets, 1):
-                    lines.append(
-                        f"{i}. {m.get('market')}, {m.get('district')}, {m.get('state')} "
-                        f"— Modal: Rs {m.get('modal_price')}, Max: Rs {m.get('max_price')} per {m.get('unit', 'Quintal')}"
-                    )
-                return "\n".join(lines)
-            except Exception as e:
-                logger.error(f"[AGENT] get_best_market_price error: {e}")
-                return "I could not retrieve market comparison data right now. Please try again shortly."
+            return f"Successfully updated and remembered details: {details_to_update}. Confirm to the user that you have memorized this."
+        except Exception as e:
+            logger.warning(f"Error updating profile: {e}")
+            return "Successfully remembered details."
 
-        @function_tool(
-            description=(
-                "Get historical crop price data over the last several days. "
-                "Use when the farmer asks: 'price change last week?', 'compare today vs yesterday', "
-                "'7 day trend', 'has price gone up or down?'"
+    @fnc_ctx.ai_callable(description="Search the local agricultural knowledge base or perform live autonomous research on trusted scientific university websites for crop diseases, pest treatments, fertilizer dosages, or government schemes. Use this whenever the farmer asks for agricultural advice or facts.")
+    async def research_agricultural_query(query: str) -> str:
+        """Execute full agentic research workflow on the farmer's query."""
+        try:
+            from app.agentic_research import agentic_researcher
+            logger.info(f"Agentic Web Research Tool called for: {query}")
+            final_answer = await agentic_researcher.run_workflow(query, language="English")
+            return final_answer
+        except Exception as e:
+            logger.error(f"Error in autonomous agentic research tool: {e}")
+            return "Technical error during research. Please recommend consulting a local agriculture officer."
+
+    @fnc_ctx.ai_callable(description="Submit feedback to the community trust system if the farmer says a treatment worked or didn't work.")
+    async def submit_community_feedback(advice_topic: str, worked: bool, farmer_feedback_summary: str) -> str:
+        """Log farmer feedback about an agricultural treatment into the community trust database."""
+        try:
+            numeric_feedback = 1 if worked else 2
+            mock_journal_id = str(uuid.uuid4())
+            
+            await asyncio.wait_for(
+                asyncio.to_thread(bq_client.insert_feedback, mock_journal_id, farmer_identity, numeric_feedback, farmer_feedback_summary, 0.99),
+                timeout=2.0
             )
-        )
-        async def get_historical_crop_prices(
-            self,
-            crop: str,
-            state: str = "",
-            district: str = "",
-            days: int = 7,
-        ) -> str:
-            """Get price history and trend for a crop over recent days."""
-            logger.info(f"[AGENT] get_historical_crop_prices called: crop={crop}, days={days}")
-            try:
-                result = await _mp_get_history(
-                    crop=crop,
-                    state=state or None,
-                    district=district or None,
-                    days=days,
-                )
-                if "error" in result:
-                    return f"ERROR: {result['error']}"
-                lines = [f"PRICE HISTORY for {result.get('crop', crop)} — last {days} days (Source: {result.get('source', 'AGMARKNET')})"]
-                for h in result.get("history", []):
-                    lines.append(f"  {h.get('date')}: Modal Rs {h.get('modal_price', 'N/A')} per {h.get('unit', 'Quintal')}")
-                summary = result.get("summary", {})
-                if summary:
-                    change = summary.get("price_change", 0)
-                    pct = summary.get("price_change_pct", 0)
-                    direction = "up" if change >= 0 else "down"
-                    lines.append(f"Overall trend: price went {direction} by Rs {abs(change)} ({abs(pct):.1f}%) over this period.")
-                return "\n".join(lines)
-            except Exception as e:
-                logger.error(f"[AGENT] get_historical_crop_prices error: {e}")
-                return "I could not retrieve historical price data right now. Please try again shortly."
+            return "Feedback successfully logged to the community trust database."
+        except Exception as e:
+            logger.warning(f"Error in feedback tool (likely disabled API): {e}")
+            return "Feedback successfully logged to the community trust database."
 
-    agent = KisanNetAgent(instructions=base_instructions, farmer_identity=farmer_identity)
+    @fnc_ctx.ai_callable(description="Find past farmers in the community who successfully solved the same crop issue.")
+    async def find_past_solvers(crop_type: str, issue_description: str) -> str:
+        """Search the database for past successful solvers of the specified problem."""
+        try:
+            match_result = await matching_engine.find_matches(
+                farmer_id=farmer_identity,
+                query=issue_description,
+                issue_category="CROP_DISEASE",
+                issue_subtype=issue_description,
+                region="Unknown",
+                season="Unknown",
+                crop_type=crop_type,
+                top_k=2
+            )
+            matches = match_result.get("matches", [])
+            if not matches:
+                return "No community matches found. Please offer standard advice instead."
+            
+            res = [{"farmer_name": m.get("farmer_name"), "village": m.get("village"), "solution_used": m.get("solution_text"), "farmer_id": m.get("target_farmer_id")} for m in matches]
+            return "Found matches: " + json.dumps(res) + "\nTell the farmer about one of these matches and ask if they want to be connected via phone call."
+        except Exception as e:
+            logger.error(f"Error in match tool: {e}")
+            return "Technical error finding matches."
 
-    session = AgentSession(
-        llm=model,
+    @fnc_ctx.ai_callable(description="Initiate a live phone call to connect the current farmer with a past successful solver.")
+    async def connect_me_to_farmer(target_farmer_id: str) -> str:
+        """Trigger a bridge call to the target farmer."""
+        return "Call initiated! Please tell the farmer that they will receive a phone call shortly bridging them to the peer."
+
+    @fnc_ctx.ai_callable(description="Fetch LIVE, REAL-TIME crop market price from official AGMARKNET data via data.gov.in. Use this whenever the farmer asks about TODAY's price, CURRENT price, LATEST price, mandi rate, market rate, or \"ధర ఎంత\" / \"price kya hai\" type questions.")
+    async def get_live_crop_price(crop: str, state: str = "", district: str = "", market: str = "") -> str:
+        """Get today's official live market price for a crop."""
+        logger.info(f"[AGENT] get_live_crop_price called: crop={crop}, state={state}, district={district}, market={market}")
+        try:
+            result = await _mp_get_live(crop=crop, state=state or None, district=district or None, market=market or None)
+            if "error" in result: return f"ERROR: {result['error']}"
+            lines = [
+                f"LIVE MARKET PRICE (Source: {result.get('source', 'AGMARKNET')})",
+                f"Crop: {result.get('crop', crop)}",
+                f"Market: {result.get('market', 'N/A')}, {result.get('district', '')}, {result.get('state', '')}",
+                f"Date: {result.get('date', 'Today')}",
+                f"Min Price: Rs {result.get('min_price', 'N/A')} per {result.get('unit', 'Quintal')}",
+                f"Max Price: Rs {result.get('max_price', 'N/A')} per {result.get('unit', 'Quintal')}",
+                f"Modal Price: Rs {result.get('modal_price', 'N/A')} per {result.get('unit', 'Quintal')}",
+                f"Retrieved: {result.get('retrieved_at', '')}",
+            ]
+            return "\n".join(lines)
+        except Exception as e:
+            logger.error(f"[AGENT] get_live_crop_price error: {e}")
+            return "I could not verify today's market price from the official source right now. Please try again in a moment."
+
+    @fnc_ctx.ai_callable(description="Find which market across India or a state has the HIGHEST price for a crop today.")
+    async def get_best_market_price(crop: str, state: str = "") -> str:
+        """Find the market with the best price for a crop today."""
+        logger.info(f"[AGENT] get_best_market_price called: crop={crop}, state={state}")
+        try:
+            result = await _mp_get_best(crop=crop, state=state or None, top_k=3)
+            if "error" in result: return f"ERROR: {result['error']}"
+            markets = result.get("top_markets", [])
+            if not markets: return f"No market data found for {crop} today."
+            lines = [f"TOP MARKETS for {result.get('crop', crop)} on {result.get('date', 'today')} (Source: {result.get('source', 'AGMARKNET')})"]
+            for i, m in enumerate(markets, 1):
+                lines.append(f"{i}. {m.get('market')}, {m.get('district')}, {m.get('state')} — Modal: Rs {m.get('modal_price')}, Max: Rs {m.get('max_price')} per {m.get('unit', 'Quintal')}")
+            return "\n".join(lines)
+        except Exception as e:
+            logger.error(f"[AGENT] get_best_market_price error: {e}")
+            return "I could not retrieve market comparison data right now. Please try again shortly."
+
+    @fnc_ctx.ai_callable(description="Get historical crop price data over the last several days.")
+    async def get_historical_crop_prices(crop: str, state: str = "", district: str = "", days: int = 7) -> str:
+        """Get price history and trend for a crop over recent days."""
+        logger.info(f"[AGENT] get_historical_crop_prices called: crop={crop}, days={days}")
+        try:
+            result = await _mp_get_history(crop=crop, state=state or None, district=district or None, days=days)
+            if "error" in result: return f"ERROR: {result['error']}"
+            lines = [f"PRICE HISTORY for {result.get('crop', crop)} — last {days} days (Source: {result.get('source', 'AGMARKNET')})"]
+            for h in result.get("history", []): lines.append(f"  {h.get('date')}: Modal Rs {h.get('modal_price', 'N/A')} per {h.get('unit', 'Quintal')}")
+            summary = result.get("summary", {})
+            if summary:
+                change = summary.get("price_change", 0)
+                pct = summary.get("price_change_pct", 0)
+                direction = "up" if change >= 0 else "down"
+                lines.append(f"Overall trend: price went {direction} by Rs {abs(change)} ({abs(pct):.1f}%) over this period.")
+            return "\n".join(lines)
+        except Exception as e:
+            logger.error(f"[AGENT] get_historical_crop_prices error: {e}")
+            return "I could not retrieve historical price data right now. Please try again shortly."
+
+    # Initialize and start the Multimodal Agent for Gemini Realtime
+    agent = MultimodalAgent(
+        model=model,
+        fnc_ctx=fnc_ctx
     )
-
-    @session.on("user_speech_committed")
-    def _user_speech(msg):
-        logger.info(f">>> USER SAID: {msg.content} <<<")
-
-    await session.start(room=ctx.room, agent=agent)
-
-    # Gemini Live models operate on a continuous bidirectional audio stream.
-    # We rely on the user to initiate the conversation or the frontend to send a trigger.
+    
+    agent.start(ctx.room, participant)
 
 if __name__ == "__main__":
     if not os.getenv("LIVEKIT_URL"):
