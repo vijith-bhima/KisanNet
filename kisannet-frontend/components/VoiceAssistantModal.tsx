@@ -129,7 +129,9 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantProps> = ({
       setIsConnecting(false);
       setIsMuted(false);
     } catch (err: any) {
-      setConnectionError('Unable to connect to LiveKit Voice Agent.');
+      console.error('LiveKit connection error:', err);
+      const msg = err?.message || String(err);
+      setConnectionError(`Connection failed: ${msg.slice(0, 120)}`);
       setIsConnecting(false);
       setIsConnected(false);
     }
