@@ -555,13 +555,14 @@ async def entrypoint(ctx: JobContext):
             return "I could not retrieve historical price data right now. Please try again shortly."
 
     from livekit.agents import Agent
+    from livekit.plugins import silero
 
     # ── Set up Gemini Realtime Model + AgentSession (livekit-agents v1.x) ──
     model = google.realtime.RealtimeModel(
         model="gemini-2.5-flash-native-audio-preview-12-2025",
         api_key=os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"),
         voice="Despina",
-        thinking_config=genai_types.ThinkingConfig(thinking_budget=0)
+        thinking_config=genai_types.ThinkingConfig(thinking_budget=0),
     )
 
     tools = [
