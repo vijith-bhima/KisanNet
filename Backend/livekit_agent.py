@@ -40,10 +40,11 @@ from livekit.agents import function_tool, AgentSession
 from livekit.plugins import google
 from app.local_rag import local_rag
 
-# Import heavy clients ONCE at module level to avoid 7-8 second delay per user session
-from app.bigquery_client import bq_client
-from app.pillar4.matching_engine import matching_engine
-from app.firestore_client import firestore_client
+# NOTE: Heavy cloud clients (BigQuery, Firestore, MatchingEngine) are intentionally
+# NOT imported at module level. With spawn-mode multiprocessing, module-level imports
+# run in EVERY pre-warmed worker process, multiplying memory usage and causing OOM
+# kills on Railway's free tier. Instead, they are imported inside entrypoint() where
+# Python's module cache ensures they are only loaded once per process.
 import uuid
 import json
 
@@ -313,14 +314,19 @@ import uuid
 import json
 
 async def entrypoint(ctx: JobContext):
+    # Lazy-import heavy cloud clients here (not at module level) so that
+    # pre-warmed worker processes don't load them until a real job arrives.
+    # Python's module cache ensures they are only initialised once per process.
+    from app.bigquery_client import bq_client
+    from app.pillar4.matching_engine import matching_engine
+    from app.firestore_client import firestore_client
+
     logger.info(f"Connecting to room {ctx.room.name}")
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
     # Participant context
     participant = await ctx.wait_for_participant()
     logger.info(f"Participant {participant.identity} joined the room")
-
-    # (clients imported at module level for fast startup)
 
     farmer_identity = participant.identity
     
@@ -601,4 +607,7 @@ if __name__ == "__main__":
         # Explicitly force spawn mode so Railway/Docker containers never use
         # forkserver (which raises BrokenPipeError in containerized environments)
         multiprocessing_context="spawn",
+        # Limit to 1 idle pre-warmed process to stay within Railway's 512 MB RAM.
+        # The default (3) triples memory usage on container startup.
+        num_idle_processes=1,
     ))
