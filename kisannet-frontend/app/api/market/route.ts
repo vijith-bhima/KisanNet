@@ -25,17 +25,17 @@ export async function GET() {
 
     // Filter out non-crop/livestock records like Buffalo/Cattle if present
     const cleanRecords = records.filter((r: any) => {
-      const comm = (r.commodity || '').toLowerCase();
+      const comm = (r.commodity || r.Commodity || '').toLowerCase();
       return !comm.includes('buffalo') && !comm.includes('bull') && !comm.includes('cow') && !comm.includes('goat') && !comm.includes('sheep');
     });
 
     const formattedData = cleanRecords.map((record: any, index: number) => {
-      const rawCommodity = (record.commodity || '').trim();
+      const rawCommodity = (record.commodity || record.Commodity || '').trim();
       const cropMeta = resolveCropMetadata(rawCommodity);
 
-      const modalPrice = parseFloat(record.modal_price) || 0;
-      const minPrice = parseFloat(record.min_price) || (modalPrice > 0 ? modalPrice - 100 : 0);
-      const maxPrice = parseFloat(record.max_price) || (modalPrice > 0 ? modalPrice + 100 : 0);
+      const modalPrice = parseFloat(record.modal_price || record.Modal_x0020_Price) || 0;
+      const minPrice = parseFloat(record.min_price || record.Min_x0020_Price) || (modalPrice > 0 ? modalPrice - 100 : 0);
+      const maxPrice = parseFloat(record.max_price || record.Max_x0020_Price) || (modalPrice > 0 ? modalPrice + 100 : 0);
 
       // Price per KG (1 Quintal = 100 KG)
       const pricePerKg = Number((modalPrice / 100).toFixed(1));
@@ -55,7 +55,7 @@ export async function GET() {
       }
 
       // Format date
-      let formattedDate = record.arrival_date || '';
+      let formattedDate = record.arrival_date || record.Arrival_Date || '';
       if (formattedDate.includes('/')) {
         // e.g. 23/08/2026
         const parts = formattedDate.split('/');
@@ -70,7 +70,7 @@ export async function GET() {
         cropNameEn: cropMeta.nameEn,
         rawCommodity: rawCommodity,
         category: cropMeta.category,
-        variety: record.variety || 'Local',
+        variety: record.variety || record.Variety || 'Local',
         imageUrl: cropMeta.imageUrl,
         currentPrice: modalPrice, // in Quintal
         modalPrice: modalPrice,
@@ -84,13 +84,13 @@ export async function GET() {
         priceChange: trendChange,
         trend: trend,
         trendTextTe: trendTextTe,
-        district: record.district || record.market || 'Telangana',
-        state: record.state || 'Telangana',
-        marketNameTe: record.market,
-        marketNameEn: record.market,
+        district: record.district || record.District || record.market || record.Market || 'Telangana',
+        state: record.state || record.State || 'Telangana',
+        marketNameTe: record.market || record.Market,
+        marketNameEn: record.market || record.Market,
         distanceKm: Math.floor(Math.random() * 80) + 8,
         date: formattedDate || 'Today (Live)',
-        rawDate: record.arrival_date || '',
+        rawDate: record.arrival_date || record.Arrival_Date || '',
       };
     });
 
