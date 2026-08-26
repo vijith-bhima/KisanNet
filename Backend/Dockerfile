@@ -30,5 +30,5 @@ EXPOSE 8080
 
 # (Removed Docker HEALTHCHECK to avoid conflicts with Railway/Render dynamic ports)
 
-# Start script for Hugging Face
-CMD ["bash", "start.sh"]
+# Start uvicorn server for Cloud Run / Railway
+CMD sh -c "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}"

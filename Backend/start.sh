@@ -1,8 +1,12 @@
 #!/bin/bash
-# KisanNet Start Script for Hugging Face Spaces
+# KisanNet Smart Start Script
+# Set SERVICE_TYPE=voice in Railway env vars for the voice agent service.
+# Leave it unset (or set to "api") for the FastAPI backend service.
 
-echo "Starting KisanNet FastAPI (Port 7860 for Hugging Face Healthcheck)..."
-uvicorn app.main:app --host 0.0.0.0 --port 7860 &
-
-echo "Starting KisanNet Voice Agent (LiveKit)..."
-python livekit_agent.py start
+if [ "$SERVICE_TYPE" = "voice" ]; then
+    echo "Starting KisanNet Voice Agent (LiveKit)..."
+    python livekit_agent.py start
+else
+    echo "Starting KisanNet Backend API (FastAPI)..."
+    uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8080}
+fi
