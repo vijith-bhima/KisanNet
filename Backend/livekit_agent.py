@@ -3,6 +3,14 @@ import logging
 import os
 import sys
 import json
+import multiprocessing
+
+# Fix for BrokenPipeError on Docker / Railway
+if sys.platform != "win32":
+    try:
+        multiprocessing.set_start_method('spawn', force=True)
+    except RuntimeError:
+        pass
 # Add backend directory to path if needed for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from dotenv import load_dotenv
