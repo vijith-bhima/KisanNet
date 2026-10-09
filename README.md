@@ -8,7 +8,7 @@
 
 KisanNet is built on a high-availability, modular architecture structured across **5 core pillars**:
 
-```text
+``text
                                ┌─────────────────────────────┐
                                │   KisanNet Frontend UI      │
                                │   (Next.js 14 / TypeScript) │
